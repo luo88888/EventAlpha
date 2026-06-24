@@ -25,23 +25,30 @@ logger = logging.getLogger(__name__)
 
 # ── RSS 源配置 ──────────────────────────────────────────────
 # 每个源：name（写入 source 字段）、url（RSS 地址）
-RSS_SOURCES: list[dict[str, str]] = [
-    {
-        "name": "reuters",
-        "url": "https://feeds.reuters.com/reuters/topNews",
-    },
-    {
-        "name": "bbc",
-        "url": "https://feeds.bbci.co.uk/news/rss.xml",
-    },
-    {
-        "name": "cnbc",
-        "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
-    },
-    {
-        "name": "aljazeera",
-        "url": "https://www.aljazeera.com/xml/rss/all.xml",
-    },
+# RSS_SOURCES: list[dict[str, str]] = [
+#     {
+#         "name": "reuters",
+#         "url": "https://feeds.reuters.com/reuters/topNews",
+#     },
+#     {
+#         "name": "bbc",
+#         "url": "https://feeds.bbci.co.uk/news/rss.xml",
+#     },
+#     {
+#         "name": "cnbc",
+#         "url": "https://search.cnbc.com/rs/search/combinedcms/view.xml?partnerId=wrss01&id=100003114",
+#     },
+#     {
+#         "name": "aljazeera",
+#         "url": "https://www.aljazeera.com/xml/rss/all.xml",
+#     },
+# ]
+RSS_SOURCES = [
+    {"name": "36kr",        "url": "https://36kr.com/feed"},
+    {"name": "wallstreetcn", "url": "https://wallstreetcn.com/rss.xml"},
+    {"name": "caixin",       "url": "https://feed.caixin.com/"},
+    {"name": "sina_finance", "url": "http://finance.sina.com.cn/rss/roll.xml"},
+    {"name": "eastmoney",    "url": "http://finance.eastmoney.com/rss.xml"},
 ]
 
 # HTTP 请求超时（秒）
@@ -108,7 +115,11 @@ def collect_source(db: Session, source_cfg: dict[str, str]) -> CollectStats:
         return stats
 
     entries = feed.get("entries", [])
-    stats.fetched = len(entries)
+    stats.fetched = len(entries)  # 新闻条数
+
+    # 内存去重：同一批 feed 内可能有重复条目，避免 session 内冲突
+    seen_hashes: set[str] = set()
+    seen_urls: set[str] = set()
 
     for entry in entries:
         title = (entry.get("title") or "").strip()
@@ -118,6 +129,13 @@ def collect_source(db: Session, source_cfg: dict[str, str]) -> CollectStats:
             continue
 
         content_hash = _compute_hash(title, link)
+
+        # 内存去重：同一批次内已见过
+        if content_hash in seen_hashes or link in seen_urls:
+            stats.skipped += 1
+            continue
+        seen_hashes.add(content_hash)
+        seen_urls.add(link)
 
         # 主去重：content_hash
         exists = db.execute(
@@ -153,7 +171,13 @@ def collect_source(db: Session, source_cfg: dict[str, str]) -> CollectStats:
         db.add(news)
         stats.new += 1
 
-    db.commit()
+    try:
+        db.commit()
+    except Exception as e:
+        logger.error("提交 %s 数据失败: %s", name, e)
+        db.rollback()
+        stats.new = 0
+
     logger.info(
         "采集 %s: fetched=%d, new=%d, skipped=%d",
         name,

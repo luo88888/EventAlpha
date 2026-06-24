@@ -51,36 +51,51 @@ feedparser 解析条目
     ↓
 SHA-256(title + url) → content_hash
     ↓
-查 raw_news 表：content_hash 是否存在？
-    ├─ 存在 → skip
-    └─ 不存在 → 再查 url 是否存在？
+内存去重：seen_hashes / seen_urls 是否已见？
+    ├─ 已见 → skip（同一批次内的重复条目）
+    └─ 未见 → 查 raw_news 表：content_hash 是否存在？
                   ├─ 存在 → skip
-                  └─ 不存在 → INSERT raw_news
+                  └─ 不存在 → 再查 url 是否存在？
+                                ├─ 存在 → skip
+                                └─ 不存在 → INSERT raw_news
+    ↓
+db.commit()（失败则 rollback，不影响其他源）
 ```
 
 ### 2.2 去重策略
 
-采用两级去重：
+采用三级去重：
 
-1. **主去重：content_hash**（SHA-256 of `title|url`）
+1. **内存去重：seen_hashes / seen_urls**
+   - 同一批 feed 内可能包含重复条目（如 BBC RSS 返回两条 title+url 完全相同的新闻）
+   - 在进入 DB 查询前用 set 拦截，避免 SQLAlchemy session 内出现两条相同 content_hash 导致 commit 时 UNIQUE 约束冲突
+2. **主去重：content_hash**（SHA-256 of `title|url`）
    - `raw_news.content_hash` 字段有 UNIQUE 约束
    - 即使同一新闻标题略有不同，只要 title+url 组合一致就不会重复入库
-2. **备用去重：url 索引查询**
+3. **备用去重：url 索引查询**
    - content_hash 未命中时，按 url 再查一次
    - 防止同一文章通过不同 RSS 源以不同标题分发
 
-### 2.3 RSS 源配置
+### 2.3 错误隔离
+
+每个 RSS 源的采集（`collect_source`）是独立的：
+
+- **网络错误**：`_fetch_feed()` 失败时记录日志并跳过该源，不影响其他源
+- **入库错误**：`db.commit()` 失败时执行 `db.rollback()` 回滚该源的数据，记录日志，后续源正常采集
+- 这保证了单个源的问题不会导致整个采集请求 500，也不会污染数据库会话
+
+### 2.4 RSS 源配置
 
 在 `rss_collector.py` 的 `RSS_SOURCES` 列表中配置，每个源包含 `name`（写入 source 字段）和 `url`（RSS 地址）：
 
 | 源 | URL | 状态 |
 |----|-----|------|
-| reuters | `https://feeds.reuters.com/reuters/topNews` | ⚠️ 返回 0 条 |
-| bbc | `https://feeds.bbci.co.uk/news/rss.xml` | ⚠️ 返回 0 条 |
+| reuters | `https://feeds.reuters.com/reuters/topNews` | ⚠️ SSL 错误，跳过 |
+| bbc | `https://feeds.bbci.co.uk/news/rss.xml` | ⚠️ 网络不可达，返回 0 条 |
 | cnbc | `https://search.cnbc.com/rs/search/combinedcms/view.xml?...` | ✅ 正常 |
-| aljazeera | `https://www.aljazeera.com/xml/rss/all.xml` | ⚠️ 返回 0 条 |
+| aljazeera | `https://www.aljazeera.com/xml/rss/all.xml` | ⚠️ 网络不可达，返回 0 条 |
 
-> reuters/bbc/aljazeera 返回 0 条，可能是 RSS URL 过期或当前网络环境无法访问。后续可替换为其他可用源。
+> reuters/bbc/aljazeera 在当前网络环境下不可达，但不会导致采集崩溃。后续可替换为其他可用源或使用代理。
 
 ---
 
@@ -99,12 +114,12 @@ SHA-256(title + url) → content_hash
   "results": [
     {"source": "reuters", "fetched": 0, "new": 0, "skipped": 0},
     {"source": "bbc", "fetched": 0, "new": 0, "skipped": 0},
-    {"source": "cnbc", "fetched": 30, "new": 30, "skipped": 0},
+    {"source": "cnbc", "fetched": 30, "new": 4, "skipped": 26},
     {"source": "aljazeera", "fetched": 0, "new": 0, "skipped": 0}
   ],
   "total_fetched": 30,
-  "total_new": 30,
-  "total_skipped": 0
+  "total_new": 4,
+  "total_skipped": 26
 }
 ```
 
@@ -135,24 +150,37 @@ SHA-256(title + url) → content_hash
 curl -X POST http://localhost:8000/api/jobs/collect
 ```
 
-- CNBC 返回 30 条，全部为新条目，写入 `raw_news`
-- 其他 3 个源返回 0 条
+- CNBC 返回 30 条，4 条新入库，26 条去重跳过
+- 其他 3 个源返回 0 条（网络不可达，但不崩溃）
 
 ### 4.2 去重验证
 
 再次调用采集接口：
 
 - CNBC 再次拉到 30 条，但全部因 content_hash 重复被跳过（`new=0, skipped=30`）
-- 数据库总数保持 30 条不变
+- 数据库总数保持不变
 
 ### 4.3 数据库验证
 
 ```sql
-SELECT count(*) FROM raw_news;  -- 30
+SELECT count(*) FROM raw_news;
 SELECT source, title, content_hash FROM raw_news LIMIT 3;
 ```
 
 每条记录包含完整的 source、title、summary、url、content_hash、published_at、collected_at 字段。
+
+### 4.4 Bug 修复验证
+
+**修复前的问题：**
+1. BBC RSS 返回重复条目 → `db.commit()` 时 UNIQUE 约束冲突 → 整个请求 500
+2. `db.commit()` 在 try/except 外面 → 单个源失败导致所有源数据丢失
+
+**修复后的单元测试：**
+
+| 测试场景 | 结果 |
+|----------|------|
+| Feed 内 3 条相同条目 | ✅ 只插入 1 条，跳过 2 条（内存去重） |
+| 源 2 commit 失败，源 3 正常 | ✅ 源 2 被隔离（rollback），源 3 正常采集 |
 
 ---
 
@@ -181,10 +209,12 @@ curl -X POST http://localhost:8000/api/jobs/collect
 
 ## 6. 已知问题与后续
 
-1. **3 个 RSS 源返回 0 条** — reuters、bbc、aljazeera 的 RSS URL 可能过期或被网络限制，需要替换为其他可用源或使用代理。
+1. **3 个 RSS 源不可达** — reuters（SSL 错误）、bbc、aljazeera 在当前网络环境下无法访问，但不会导致采集崩溃。后续可替换为其他可用源或使用代理。
 2. **无错误重试** — 单个源拉取失败会记录日志但不重试，MVP 阶段可接受。
 3. **采集限流** — 未做请求间隔控制，如果源很多需要注意频率。
 4. **摘要 HTML 清理** — feedparser 的 summary 字段可能含 HTML 标签，当前用正则简单去除，复杂场景可能需要更完善的清理。
+5. ~~**Feed 内重复条目导致 UNIQUE 冲突**~~ — ✅ 已修复（内存去重 set）
+6. ~~**db.commit() 未捕获异常导致整个请求 500**~~ — ✅ 已修复（try/except + rollback）
 
 ---
 
