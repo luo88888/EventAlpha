@@ -20,6 +20,18 @@ def trigger_collect(db: Session = Depends(get_db)) -> CollectResponse:
     返回每个源的采集统计。
     """
     stats = collect_all(db)
+    # ===== 采集报告 =====
+    print("\n" + "=" * 55)
+    print("📡  EventAlpha 数据采集报告")
+    print("=" * 55)
+    for s in stats:
+        print(f"  [{s.source}] 获取: {s.fetched}, 入库: {s.new}, 跳过: {s.skipped}")
+    print("-" * 55)
+    print(f"  总计: 获取 {sum(s.fetched for s in stats)}, "
+          f"入库 {sum(s.new for s in stats)}, "
+          f"跳过 {sum(s.skipped for s in stats)}")
+    print("=" * 55 + "\n")
+    # =============================
     results = [
         CollectResult(
             source=s.source,
