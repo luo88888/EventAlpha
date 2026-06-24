@@ -1,0 +1,4 @@
+# 数据库连接配置
+# SQLite 用于 MVP 阶段；后续切换 PostgreSQL 时修改 url 即可
+
+url: sqlite:///./eventalpha.db
