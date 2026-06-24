@@ -137,3 +137,6 @@ docs/*
 !docs/目录结构说明.md
 !docs/数据库设计.md
 !docs/Day2_数据采集层说明.md
+
+# ---------- claude ----------
+CLAUDE.md
