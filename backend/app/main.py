@@ -6,6 +6,10 @@
 
 from __future__ import annotations
 
+from app.core.logging_config import setup_logging
+
+setup_logging()
+
 from fastapi import FastAPI
 
 from app.api.v1.collect import router as collect_router

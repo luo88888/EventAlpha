@@ -93,6 +93,19 @@ class RAGConfig:
     top_k: int = 5
 
 
+@dataclass(frozen=True)
+class LoggingConfig:
+    """日志配置：级别、格式、输出目标、轮转策略。"""
+
+    level: str = "INFO"
+    format: str = "%(asctime)s | %(levelname)-8s | %(name)s | %(message)s"
+    datefmt: str = "%Y-%m-%d %H:%M:%S"
+    file_path: str = "logs/app.log"
+    file_max_bytes: int = 10485760
+    file_backup_count: int = 5
+    console_enabled: bool = True
+
+
 # ── 公开加载函数 ───────────────────────────────────────────
 
 
@@ -106,6 +119,12 @@ def load_llm_config() -> LLMConfig:
 def load_rag_config() -> RAGConfig:
     """加载 RAG 配置（向量库、嵌入模型、检索参数等）。"""
     return _build_config(RAGConfig, _load_yaml("rag.yaml"))
+
+
+@lru_cache
+def load_logging_config() -> LoggingConfig:
+    """加载日志配置（级别、格式、轮转策略等）。"""
+    return _build_config(LoggingConfig, _load_yaml("logging.yaml"))
 
 
 @lru_cache
