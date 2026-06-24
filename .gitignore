@@ -135,3 +135,6 @@ $RECYCLE.BIN/
 docs/*
 !docs/EventAlpha_MVP一周项目计划.md
 !docs/目录结构说明.md
+
+# ---------- claude ----------
+CLAUDE.md
