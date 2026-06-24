@@ -1,0 +1,31 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "eventalpha-backend"
+version = "0.1.0"
+description = "EventAlpha 后端：热点事件驱动投资研究 MVP（数据层）"
+requires-python = ">=3.12"
+dependencies = [
+    "sqlalchemy>=2.0,<3",
+    "alembic>=1.13",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "greenlet>=2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
