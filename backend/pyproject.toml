@@ -17,6 +17,15 @@ dependencies = [
     "uvicorn[standard]>=0.34",
     "feedparser>=6.0",
     "httpx>=0.28",
+    "langchain==1.2.12",
+    "langgraph==1.1.2",
+    # LLM 模型工厂集成包：deepseek / openai / qwen(tongyi via community)
+    "langchain-deepseek==1.0.1",
+    "langchain-openai==1.2.1",
+    "langchain-community==0.4.1",
+    "dashscope==1.25.9",
+    # 配置：YAML 解析（config.yaml 存非密钥配置）
+    "pyyaml>=6",
 ]
 
 [project.optional-dependencies]
@@ -26,6 +35,10 @@ dev = [
     "pytest-asyncio>=0.24",
     "httpx",  # TestClient 需要
 ]
+
+[[tool.uv.index]]
+url = "https://pypi.tuna.tsinghua.edu.cn/simple"
+default = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["app"]

@@ -1,4 +1,4 @@
-"""Alembic env：从 Settings 注入数据库 URL，导入全部模型供 autogenerate。
+"""Alembic env：从 load_database_config() 注入数据库 URL，导入全部模型供 autogenerate。
 
 render_as_batch=True：SQLite 的 ALTER TABLE 几乎不支持，批模式用"重建表"实现变更（对 PG 无害）。
 compare_type=True：检测列类型变更（否则只检测增删列）。
@@ -16,13 +16,13 @@ from sqlalchemy import engine_from_config, pool
 # 确保 backend/ 在 sys.path，使 `import app` 生效（env.py 位于 backend/alembic/，上一级即 backend/）
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from app.core.config import get_settings  # noqa: E402
+from utils.config_handler import load_database_config  # noqa: E402
 from app.models import Base  # noqa: E402  导入副作用：注册所有表到 Base.metadata
 
 config = context.config
 
 # 从 .env 注入数据库 URL，覆盖 alembic.ini 里留空的 sqlalchemy.url
-config.set_main_option("sqlalchemy.url", get_settings().DATABASE_URL)
+config.set_main_option("sqlalchemy.url", load_database_config().url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

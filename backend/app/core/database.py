@@ -13,12 +13,12 @@ from datetime import datetime, timezone
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
-from app.core.config import get_settings
+from utils.config_handler import load_database_config
 
-settings = get_settings()
+settings = load_database_config()
 
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.url,
     connect_args={"check_same_thread": False},
     pool_pre_ping=True,
 )
