@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "eventalpha-backend"
 version = "0.1.0"
-description = "EventAlpha 后端：热点事件驱动投资研究 MVP（数据层）"
+description = "EventAlpha 后端：热点事件驱动投资研究 MVP"
 requires-python = ">=3.12"
 dependencies = [
     "sqlalchemy>=2.0,<3",
@@ -13,11 +13,18 @@ dependencies = [
     "pydantic>=2",
     "pydantic-settings>=2",
     "greenlet>=2",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "feedparser>=6.0",
+    "httpx>=0.28",
 ]
 
 [project.optional-dependencies]
 dev = [
     "ruff",
+    "pytest>=8",
+    "pytest-asyncio>=0.24",
+    "httpx",  # TestClient 需要
 ]
 
 [tool.hatch.build.targets.wheel]
