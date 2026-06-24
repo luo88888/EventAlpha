@@ -1,0 +1,137 @@
+# ============================================================
+# EventAlpha .gitignore
+# 技术栈：Python (FastAPI) + Next.js (React) + SQLite/Alembic
+# ============================================================
+
+# ---------- 密钥与环境变量 ----------
+# 真实密钥绝不入库；.env_example 为模板可提交
+.env
+.env.*
+!.env_example
+!.env.example
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 打包与构建产物
+build/
+dist/
+*.egg
+*.egg-info/
+.eggs/
+develop-eggs/
+sdist/
+wheels/
+*.whl
+
+# 虚拟环境
+.venv/
+venv/
+env/
+ENV/
+.python-version
+
+# 测试与覆盖率
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.tox/
+.nox/
+.mypy_cache/
+.ruff_cache/
+.pytype/
+.dmypy.json
+dmypy.json
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ---------- Node.js / Next.js ----------
+node_modules/
+.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# Next.js 构建产物
+.next/
+out/
+build/
+*.tsbuildinfo
+next-env.d.ts
+
+# 前端测试与缓存
+.npm
+.eslintcache
+.cache/
+.parcel-cache/
+.turbo/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ---------- 数据库 (SQLite) ----------
+# MVP 起步用 SQLite，数据库文件不入库
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite3-journal
+
+# Alembic 迁移保留版本文件，但忽略本地缓存
+backend/alembic/__pycache__/
+
+# ---------- 日志与运行时数据 ----------
+logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ---------- 编辑器与 IDE ----------
+.vscode/
+.cursor/
+.trae/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 操作系统 ----------
+.DS_Store
+ehthumbs.db
+$RECYCLE.BIN/
+
+# ---------- 临时与备份文件 ----------
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# ---------- 依赖锁文件策略说明 ----------
+# Python: pyproject.toml 的 uv.lock/poetry.lock 视团队约定，默认提交（此处不忽略）
+# Node: package-lock.json / pnpm-lock.yaml / yarn.lock 默认提交（此处不忽略）
+
+# ---------- 其他 ----------
+# 本地数据与样例产物（测试样例源文件放在 backend/tests/samples/ 下，应提交）
+*.local
+
+
+# ---------- 本地临时文档 ----------
+docs/*
+!docs/EventAlpha_MVP一周项目计划.md
+!docs/目录结构说明.md
