@@ -49,3 +49,8 @@ target-version = "py312"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+# 让 from app... / from utils... 在测试中可导入（项目从 backend/ 运行）
+pythonpath = ["."]
+testpaths = ["tests"]

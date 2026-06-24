@@ -110,6 +110,7 @@ logs/
 .DS_Store
 Thumbs.db
 desktop.ini
+CLAUDE.local.md
 
 # ---------- 操作系统 ----------
 .DS_Store
@@ -132,11 +133,11 @@ $RECYCLE.BIN/
 
 
 # ---------- 本地临时文档 ----------
-docs/*
-!docs/EventAlpha_MVP一周项目计划.md
-!docs/目录结构说明.md
-!docs/数据库设计.md
-!docs/Day2_数据采集层说明.md
+docs/参考思路.md
+docs/EventAlpha_项目计划.md
+docs/EventAlpha_热点事件驱动投资Agent系统_内容整理.md
+docs/EventAlpha_热点事件驱动投资Agent系统_图片拼接纠错版.pptx
+/命令.md
 
 # ---------- claude ----------
 CLAUDE.md
