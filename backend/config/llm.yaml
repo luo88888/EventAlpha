@@ -1,5 +1,5 @@
 # LLM 默认配置
 # 支持扩展字段：temperature、max_tokens 等运行时参数
 
-default_provider: deepseek
-default_model: deepseek-chat
+default_provider: xiaomi
+default_model: mimo-v2.5-pro

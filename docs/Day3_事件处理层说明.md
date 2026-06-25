@@ -238,10 +238,11 @@ curl -X POST http://localhost:8000/api/jobs/extract
 ## 6. 已知问题与后续
 
 1. **LLM 依赖外部 API** — 抽取需 `DEEPSEEK_API_KEY`（或其他 provider）就绪；密钥缺失或限流时该条计 `failed`，不中断批次。
+2. ~~**LLM 返回 None 时崩溃**~~ — ✅ Day 4 测试发现 `model.invoke()` 在 API Key 未配置时返回 `None` 而非抛异常，导致 `result.event_time` 报 `AttributeError`。已修复：在 `event_extractor.py` 中 `invoke()` 后增加 `if result is None` 提前返回。
 2. **合并阈值固定 0.6** — `event_dedup.py` 的 `MERGE_THRESHOLD` 常量，后续可按语料调优或外置到配置。
 3. **候选池窗口 7 天** — `_MERGE_LOOKBACK_DAYS`，超过 7 天的相似事件不会合并，后续可配置化。
 4. **同步处理** — 逐条 LLM 调用，大批量时较慢；MVP 可接受，必要时引入队列（计划第 8 节）。
-5. **无事件详情/卡片接口** — `GET /api/events/:id` 与卡片 JSON 属 Day 5 产品服务层。
+5. ~~**无事件详情/卡片接口~~ — ✅ Day 5 已实现 `GET /api/events/{id}`、`GET /api/events/{id}/card`。
 
 ---
 

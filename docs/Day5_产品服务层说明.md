@@ -146,8 +146,8 @@ npm run dev                                                  # :3000
 
 ## 6. 已知问题与后续
 
-1. **真实库全无分析** — Day 4 推理分析层未做，详情/卡片当前全走降级占位；Day 4 完成后自然填充，前端无需改动。
-2. **importance 筛选当前返回空** — 同上，有分析数据后即生效。
+1. ~~**真实库全无分析**~~ — ✅ Day 4 推理分析层已完成，`POST /api/jobs/analyze` 写入 `event_analysis` 后，详情/卡片自动展示完整分析，前端零改动。
+2. ~~**importance 筛选当前返回空**~~ — ✅ 有分析数据后即生效。
 3. **CORS 源硬编码 `localhost:3000`** — MVP 先写死，后续可抽 config。
 4. **分页无 total** — 用「本页满 limit 启发式显示下一页」，MVP 够用。
 5. **`/card` 接口未被前端使用** — 详情页用 detail 接口已含 analysis；`fetchEventCard` 保留备用。
@@ -157,4 +157,4 @@ npm run dev                                                  # :3000
 
 ## 7. 与 Day 4 / Day 6 的衔接
 
-Day 4 推理分析层写入 `event_analysis`（与 `events` 一对一）后，Day 5 的详情页 `AnalysisCard` 与卡片接口自动从「无分析降级」切换为展示完整分析（重要性、影响行业/资产、因果链、风险提示），前端零改动。Day 6 一键演示链路 `collect → extract → analyze → 展示` 中，本层是「展示」环节。
+Day 4 推理分析层已完成（见 [Day4_推理分析层说明.md](Day4_推理分析层说明.md)），`POST /api/jobs/analyze` 写入 `event_analysis` 后，Day 5 的详情页 `AnalysisCard` 与卡片接口自动从「无分析降级」切换为展示完整分析（重要性、影响行业/资产、因果链、风险提示），前端零改动。Day 6 一键演示链路 `collect → extract → analyze → 展示` 中，本层是「展示」环节。
