@@ -11,6 +11,7 @@ from app.core.logging_config import setup_logging
 setup_logging()
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.collect import router as collect_router
 from app.api.v1.events import router as events_router
@@ -20,6 +21,15 @@ app = FastAPI(
     title="EventAlpha",
     description="热点事件驱动投资研究 MVP",
     version="0.1.0",
+)
+
+# 跨域：允许 Next.js dev（localhost:3000）访问 API。MVP 先硬编码源，后续可抽 config。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
