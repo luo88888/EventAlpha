@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class ExtractedEvent(BaseModel):
@@ -33,6 +33,14 @@ class ExtractedEvent(BaseModel):
         default=None, description="事件时间 ISO 8601；无法判断时留空"
     )
     summary: str = Field(description="事件摘要：2-3 句客观陈述")
+
+    @field_validator("event_time", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: object) -> object:
+        """LLM 有时返回空字符串而非 null，统一转为 None。"""
+        if isinstance(v, str) and v.strip() == "":
+            return None
+        return v
 
 
 class EventOut(BaseModel):
