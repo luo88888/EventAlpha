@@ -4,6 +4,7 @@
 - deepseek -> langchain_deepseek.ChatDeepSeek（API Key 自动读 DEEPSEEK_API_KEY）
 - qwen     -> langchain_community.chat_models.tongyi.ChatTongyi（API Key 自动读 DASHSCOPE_API_KEY）
 - openai   -> langchain_openai.ChatOpenAI（API Key 自动读 OPENAI_API_KEY）
+- xiaomi   -> langchain_openai.ChatOpenAI + 自定义 base_url（API Key 自动读 XIAOMI_API_KEY）
 
 API Key 由底层 SDK 从对应环境变量自动读取，无需在此显式传参；
 环境变量在启动前由 utils.config_handler 从 .env 注入。
@@ -18,7 +19,10 @@ from typing import Any
 
 from langchain_core.language_models.chat_models import BaseChatModel
 
-SUPPORTED_PROVIDERS = ("deepseek", "qwen", "openai")
+SUPPORTED_PROVIDERS = ("deepseek", "qwen", "openai", "xiaomi")
+
+# 小米 MiMo API base URL（按量付费，OpenAI 兼容）
+_XIAOMI_BASE_URL = "https://api.xiaomimimo.com/v1"
 
 
 def _build_deepseek(model_name: str, **kwargs: Any) -> BaseChatModel:
@@ -39,10 +43,29 @@ def _build_openai(model_name: str, **kwargs: Any) -> BaseChatModel:
     return ChatOpenAI(model=model_name, **kwargs)
 
 
+def _build_xiaomi(model_name: str, **kwargs: Any) -> BaseChatModel:
+    """小米 MiMo API（OpenAI 兼容）。API Key 从 XIAOMI_API_KEY 环境变量读取。"""
+    import os
+
+    from langchain_openai import ChatOpenAI
+
+    api_key = os.environ.get("XIAOMI_API_KEY")
+    if not api_key:
+        raise ValueError("XIAOMI_API_KEY 环境变量未设置，请在 .env 中配置")
+
+    return ChatOpenAI(
+        model=model_name,
+        base_url=_XIAOMI_BASE_URL,
+        api_key=api_key,
+        **kwargs,
+    )
+
+
 _BUILDERS = {
     "deepseek": _build_deepseek,
     "qwen": _build_qwen,
     "openai": _build_openai,
+    "xiaomi": _build_xiaomi,
 }
 
 

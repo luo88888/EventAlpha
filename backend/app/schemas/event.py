@@ -1,8 +1,10 @@
-"""事件处理层 Pydantic 模型。
+"""事件处理层 + 推理分析层 Pydantic 模型。
 
 - ExtractedEvent：LLM 结构化输出的目标 schema，传给 create_structured_model。
+- AnalyzedEvent：LLM 分析输出 schema，传给 create_structured_model。
 - EventOut：GET /api/events 单条事件响应。
 - ExtractResult / ExtractResponse：POST /api/jobs/extract 抽取统计。
+- AnalyzeResult / AnalyzeResponse：POST /api/jobs/analyze 分析统计。
 - EventSourceOut / AnalysisOut / EventDetail / EventCard：Day 5 产品服务层
   事件详情、事件卡片接口响应（见 docs/EventAlpha_MVP一周项目计划.md 第 6 节）。
 """
@@ -140,3 +142,31 @@ class EventCard(BaseModel):
     positive_factors: list = []
     negative_factors: list = []
     risk_warning: str | None = None
+
+
+class AnalyzedEvent(BaseModel):
+    """LLM 分析输出 schema，传给 create_structured_model(AnalyzedEvent)。
+
+    importance_score 1-5，importance_level S/A/B/C，Prompt 约束两者自洽。
+    """
+
+    importance_score: int = Field(ge=1, le=5, description="重要性评分 1-5")
+    importance_level: str = Field(description="重要性等级 S/A/B/C")
+    affected_industries: list[str] = Field(description="受影响行业列表")
+    affected_assets: list[str] = Field(description="受影响资产/公司列表")
+    causal_chain: list[str] = Field(description="因果传导链：事件→传导→市场影响")
+    positive_factors: list[str] = Field(description="正面影响因素")
+    negative_factors: list[str] = Field(description="负面影响因素")
+    risk_warning: str = Field(description="风险提示")
+
+
+class AnalyzeResult(BaseModel):
+    """单次分析任务统计。"""
+
+    analyzed: int = Field(description="本轮分析成功的事件数")
+    skipped_existing: int = Field(description="已有分析而跳过的事件数")
+    failed: int = Field(description="分析失败的事件数")
+
+
+class AnalyzeResponse(AnalyzeResult):
+    """POST /api/jobs/analyze 响应。"""

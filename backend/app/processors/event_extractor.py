@@ -72,6 +72,10 @@ def extract_event(news: RawNews) -> ExtractedEvent | None:
         logger.error("抽取事件失败 news_id=%s: %s", news.id, e)
         return None
 
+    if result is None:
+        logger.warning("LLM 返回空结果 news_id=%s", news.id)
+        return None
+
     # event_time 为空时回退到新闻发布时间
     if result.event_time is None and news.published_at is not None:
         result = result.model_copy(update={"event_time": news.published_at})

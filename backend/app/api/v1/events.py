@@ -5,6 +5,7 @@
 - GET /api/events/{id}：事件详情（含来源列表与分析块）。
 - GET /api/events/{id}/card：事件卡片 JSON（计划第 6 节字段，无分析时降级）。
 - POST /api/jobs/extract：手动触发一次事件抽取处理。
+- POST /api/jobs/analyze：手动触发一次事件分析处理。
 """
 
 from __future__ import annotations
@@ -15,6 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.analysis.analysis_processor import analyze_all
 from app.core.database import get_db
 from app.models.event import Event
 from app.models.event_analysis import EventAnalysis
@@ -22,6 +24,7 @@ from app.models.event_source import EventSource
 from app.processors.event_processor import process_all
 from app.schemas.event import (
     AnalysisOut,
+    AnalyzeResponse,
     EventCard,
     EventDetail,
     EventOut,
@@ -161,6 +164,25 @@ def trigger_extract(db: Session = Depends(get_db)) -> ExtractResponse:
     print(f"  处理: {result.processed}, 新建事件: {result.new_events}, "
           f"合并: {result.merged}")
     print(f"  噪声跳过: {result.skipped_noise}, 失败: {result.failed}")
+    print("=" * 55 + "\n")
+    # =============================
+    return result
+
+
+@router.post("/jobs/analyze", response_model=AnalyzeResponse)
+def trigger_analyze(db: Session = Depends(get_db)) -> AnalyzeResponse:
+    """手动触发一次事件分析处理。
+
+    从尚未生成分析的 events 中逐条调用 LLM 生成投资影响分析，
+    写入 event_analysis。返回本轮处理统计。
+    """
+    result = analyze_all(db)
+    # ===== 分析报告 =====
+    print("\n" + "=" * 55)
+    print("🧠 EventAlpha 事件分析报告")
+    print("=" * 55)
+    print(f"  分析成功: {result.analyzed}, 跳过: {result.skipped_existing}, "
+          f"失败: {result.failed}")
     print("=" * 55 + "\n")
     # =============================
     return result
