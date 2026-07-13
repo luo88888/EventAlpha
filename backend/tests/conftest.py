@@ -20,7 +20,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.core.database import Base, get_db, utcnow
 from app.main import app
-from app.models import Event, EventAnalysis, EventSource, RawNews  # noqa: F401 注册全部表
+from app.models import Event, EventAnalysis, EventSource, RawNews, User  # noqa: F401 注册全部表
 
 
 @pytest.fixture()
@@ -73,7 +73,8 @@ def sample_data(db: Session) -> dict:
 
     返回 {"with_analysis": id, "no_analysis": id}，供测试按 id 请求。
     """
-    # 原始新闻
+    # 原始新闻：已写 event_sources 关联，extract_status 显式设 extracted，
+    # 避免被处理层当 pending 重取
     rn = RawNews(
         source="36kr",
         title="测试新闻原文标题",
@@ -81,6 +82,7 @@ def sample_data(db: Session) -> dict:
         content_hash="h" * 64,
         summary="原文摘要",
         published_at=utcnow(),
+        extract_status="extracted",
     )
     db.add(rn)
     db.flush()

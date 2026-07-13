@@ -44,7 +44,11 @@ class ExtractedEvent(BaseModel):
 
 
 class EventOut(BaseModel):
-    """GET /api/events 单条事件响应。"""
+    """GET /api/events 单条事件响应。
+
+    importance_level / importance_score 为可选字段：列表端点 LEFT JOIN event_analysis
+    填充（无分析时为 None），便于列表卡片直接展示等级徽章，不必再逐条请求详情。
+    """
 
     id: int
     event_id: str
@@ -56,18 +60,23 @@ class EventOut(BaseModel):
     source_count: int
     status: str
     created_at: datetime
+    importance_level: str | None = None
+    importance_score: int | None = None
 
     model_config = {"from_attributes": True}
 
 
 class ExtractResult(BaseModel):
-    """单次抽取任务统计。"""
+    """单次抽取任务统计。
 
-    processed: int = Field(description="本轮处理的原始新闻数")
-    new_events: int = Field(description="本轮新建事件数")
-    merged: int = Field(description="本轮合并到既有事件的次数")
-    skipped_noise: int = Field(description="被 LLM 判定为非事件(other)而跳过的条数")
-    failed: int = Field(description="抽取/入库失败被隔离的条数")
+    字段默认 0：空批次（无待处理新闻）返回全零统计，避免空构造报错。
+    """
+
+    processed: int = Field(default=0, description="本轮处理的原始新闻数")
+    new_events: int = Field(default=0, description="本轮新建事件数")
+    merged: int = Field(default=0, description="本轮合并到既有事件的次数")
+    skipped_noise: int = Field(default=0, description="被 LLM 判定为非事件(other)而跳过的条数")
+    failed: int = Field(default=0, description="抽取/入库失败被隔离的条数")
 
 
 class ExtractResponse(ExtractResult):
@@ -169,11 +178,11 @@ class AnalyzedEvent(BaseModel):
 
 
 class AnalyzeResult(BaseModel):
-    """单次分析任务统计。"""
+    """单次分析任务统计。字段默认 0，空批次返回全零统计。"""
 
-    analyzed: int = Field(description="本轮分析成功的事件数")
-    skipped_existing: int = Field(description="已有分析而跳过的事件数")
-    failed: int = Field(description="分析失败的事件数")
+    analyzed: int = Field(default=0, description="本轮分析成功的事件数")
+    skipped_existing: int = Field(default=0, description="已有分析而跳过的事件数")
+    failed: int = Field(default=0, description="分析失败的事件数")
 
 
 class AnalyzeResponse(AnalyzeResult):

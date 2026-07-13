@@ -106,6 +106,22 @@ class LoggingConfig:
     console_enabled: bool = True
 
 
+@dataclass(frozen=True)
+class SecurityConfig:
+    """鉴权配置：JWT 算法/过期、httpOnly Cookie 参数。
+
+    SECRET_KEY 由 .env 注入（不在此处，避免入库泄露）；其余非密钥参数在此。
+    """
+
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440
+    cookie_name: str = "ea_auth_token"
+    cookie_max_age: int = 86400
+    cookie_path: str = "/"
+    cookie_samesite: str = "lax"
+    cookie_secure: bool = False
+
+
 # ── 公开加载函数 ───────────────────────────────────────────
 
 
@@ -131,3 +147,12 @@ def load_logging_config() -> LoggingConfig:
 def load_database_config() -> DatabaseConfig:
     """加载数据库配置（连接 URL 等）。"""
     return _build_config(DatabaseConfig, _load_yaml("database.yaml"))
+
+
+@lru_cache
+def load_security_config() -> SecurityConfig:
+    """加载鉴权配置（JWT 算法/过期、cookie 参数）。
+
+    SECRET_KEY 从 .env 读取；_load_yaml 内部已调 _ensure_dotenv() 注入环境变量。
+    """
+    return _build_config(SecurityConfig, _load_yaml("security.yaml"))

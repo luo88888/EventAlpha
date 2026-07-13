@@ -26,6 +26,9 @@ dependencies = [
     "dashscope==1.25.9",
     # 配置：YAML 解析（config.yaml 存非密钥配置）
     "pyyaml>=6",
+    # 鉴权：密码哈希（bcrypt 原生包，4.x+ API 稳定，无需 passlib 封装）+ JWT 签发/校验（PyJWT）
+    "bcrypt>=4.2,<5",
+    "PyJWT>=2.8,<3",
 ]
 
 [project.optional-dependencies]

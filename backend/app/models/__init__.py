@@ -11,5 +11,6 @@ from app.models.event import Event
 from app.models.event_analysis import EventAnalysis
 from app.models.event_source import EventSource
 from app.models.raw_news import RawNews
+from app.models.user import User
 
-__all__ = ["Base", "RawNews", "Event", "EventSource", "EventAnalysis"]
+__all__ = ["Base", "RawNews", "Event", "EventSource", "EventAnalysis", "User"]

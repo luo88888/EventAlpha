@@ -1,35 +1,35 @@
-/** 事件类型配色标签。未命中的 type 走灰色兜底。 */
+/** 事件类型标签：图标 + 中文名，暗色低饱和配色。
+ *
+ * 配色与图标来自 lib/constants.ts 的 TYPE_META，未命中走 other 兜底。
+ */
 
-import type { EventType } from "@/lib/types";
+import { getTypeMeta } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 
-const TYPE_STYLE: Record<string, string> = {
-  policy: "bg-purple-100 text-purple-700",
-  trade: "bg-orange-100 text-orange-700",
-  rate: "bg-green-100 text-green-700",
-  tech: "bg-blue-100 text-blue-700",
-  company: "bg-cyan-100 text-cyan-700",
-  disaster: "bg-red-100 text-red-700",
-  geopolitical: "bg-amber-100 text-amber-700",
-  other: "bg-gray-100 text-gray-600",
-};
-
-const TYPE_LABEL: Record<string, string> = {
-  policy: "政策",
-  trade: "贸易",
-  rate: "利率",
-  tech: "科技",
-  company: "公司",
-  disaster: "灾害",
-  geopolitical: "地缘",
-  other: "其他",
-};
-
-export function EventTypeTag({ type }: { type: EventType | string }) {
-  const cls = TYPE_STYLE[type] ?? TYPE_STYLE.other;
-  const label = TYPE_LABEL[type] ?? type;
+export function EventTypeTag({
+  type,
+  size = "md",
+  withIcon = true,
+  className,
+}: {
+  type: string;
+  size?: "sm" | "md";
+  withIcon?: boolean;
+  className?: string;
+}) {
+  const meta = getTypeMeta(type);
+  const Icon = meta.icon;
   return (
-    <span className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${cls}`}>
-      {label}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full border font-medium",
+        meta.chip,
+        size === "sm" ? "px-2 py-0.5 text-[11px]" : "px-2.5 py-0.5 text-xs",
+        className,
+      )}
+    >
+      {withIcon && <Icon className="h-3 w-3" strokeWidth={2.2} />}
+      {meta.label}
     </span>
   );
 }

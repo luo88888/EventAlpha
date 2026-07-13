@@ -1,11 +1,16 @@
-/** 无分析占位：事件尚未生成分析时（Day 4 推理分析层产物）显示。 */
+/** 空分析占位：暗色虚线卡片 + 图标提示。 */
+
+import { BrainCog } from "lucide-react";
 
 export function EmptyAnalysis() {
   return (
-    <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
-      <p className="text-base font-medium text-gray-600">该事件暂未生成分析</p>
-      <p className="mt-2 text-sm text-gray-400">
-        分析由推理分析层生成，事件入库后稍后自动补充。
+    <div className="rounded-2xl border border-dashed border-white/10 bg-white/[0.02] py-12 text-center">
+      <BrainCog className="mx-auto mb-3 h-10 w-10 text-[var(--color-fg-subtle)]" />
+      <p className="text-sm font-medium text-[var(--color-fg-muted)]">
+        该事件尚未生成分析
+      </p>
+      <p className="mt-1 text-xs text-[var(--color-fg-subtle)]">
+        分析由定时任务或手动触发生成，稍后可刷新查看
       </p>
     </div>
   );
