@@ -1,0 +1,9 @@
+# 鉴权配置：JWT 与 httpOnly Cookie 参数
+# JWT 密钥（SECRET_KEY）放 .env 不在此处；非密钥参数在此可入库。
+algorithm: HS256
+access_token_expire_minutes: 1440   # 24 小时
+cookie_name: ea_auth_token
+cookie_max_age: 86400               # 秒，与 expire_minutes 对齐
+cookie_path: "/"
+cookie_samesite: lax                # localhost 走 rewrites 代理后同源，lax 足够
+cookie_secure: false                # 本地 HTTP 开发；生产 HTTPS 改 true
