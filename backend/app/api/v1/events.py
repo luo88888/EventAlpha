@@ -44,15 +44,18 @@ def list_events(
     limit: int = Query(default=50, ge=1, le=200, description="返回条数上限"),
     offset: int = Query(default=0, ge=0, description="偏移量，简单分页"),
     db: Session = Depends(get_db),
-) -> list[Event]:
+) -> list[EventOut]:
     """事件列表。
 
     按 created_at 倒序返回。支持按 event_type、importance_level、时间范围筛选。
     importance_level 在 event_analysis 表上，筛选时用 INNER JOIN——只返回已生成
     分析且等级匹配的事件；不筛时返回全部（含尚未分析的事件）。MVP 用 offset/limit
     分页，不含游标与 total。
+
+    始终 selectinload analysis 并把 importance_level/score 填到 EventOut，列表卡片
+    可直接展示等级徽章，不必逐条请求详情。无分析时两字段为 None。
     """
-    stmt = select(Event)
+    stmt = select(Event).options(selectinload(Event.analysis))
     if event_type:
         stmt = stmt.where(Event.event_type == event_type)
     if importance_level:
@@ -64,7 +67,24 @@ def list_events(
     if end_time:
         stmt = stmt.where(Event.created_at <= end_time)
     stmt = stmt.order_by(Event.created_at.desc()).offset(offset).limit(limit)
-    return list(db.scalars(stmt).all())
+    events = list(db.scalars(stmt).all())
+    return [
+        EventOut(
+            id=e.id,
+            event_id=e.event_id,
+            event_title=e.event_title,
+            event_type=e.event_type,
+            event_subject=e.event_subject,
+            event_time=e.event_time,
+            summary=e.summary,
+            source_count=e.source_count,
+            status=e.status,
+            created_at=e.created_at,
+            importance_level=e.analysis.importance_level if e.analysis else None,
+            importance_score=e.analysis.importance_score if e.analysis else None,
+        )
+        for e in events
+    ]
 
 
 @router.get("/events/{id}", response_model=EventDetail)

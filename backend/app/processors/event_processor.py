@@ -3,8 +3,11 @@
 数据流见 docs/Day3_事件处理层说明.md。核心函数 process_all(db) 是 Day 3 入口，
 Day 6 一键演示链路 collect → extract → analyze 的中间环节。
 
-已处理判定：不加 raw_news 状态字段，用「raw_news.id 是否已存在于
-event_sources.raw_news_id」反查；抽取失败的不写入关联，下次自动重试。
+已处理判定：用 raw_news.extract_status 字段，只取 pending（待处理）。三种结局落库标记：
+- 抽取失败(extract_event 返回 None)→ extract_status='failed'，永久跳过（用户已确认不重试）
+- LLM 判为噪声(event_type=='other')→ extract_status='noise'，永久跳过
+- 成功抽取并写 event_sources → extract_status='extracted'
+运维兜底：如需重处理单条，手动 `UPDATE raw_news SET extract_status='pending' WHERE id=<X>`。
 """
 
 from __future__ import annotations
@@ -17,7 +20,13 @@ from sqlalchemy.orm import Session
 
 from app.models.event import Event
 from app.models.event_source import EventSource
-from app.models.raw_news import RawNews
+from app.models.raw_news import (
+    EXTRACT_STATUS_EXTRACTED,
+    EXTRACT_STATUS_FAILED,
+    EXTRACT_STATUS_NOISE,
+    EXTRACT_STATUS_PENDING,
+    RawNews,
+)
 from app.processors.event_dedup import MergeCandidate, find_mergeable
 from app.processors.event_extractor import extract_event
 from app.schemas.event import ExtractResult
@@ -26,25 +35,20 @@ logger = logging.getLogger(__name__)
 
 # 合并候选池：取近 N 天既有事件作为可合并目标（避免与太久远事件误并）
 _MERGE_LOOKBACK_DAYS = 7
-# 视为非事件的类型（LLM 判定为噪声时跳过，不建事件也不写关联）
-# TODO: 优先级 2，other 事件没有写进 event_sources，无法过滤，下次处理会被重新取出、重新调 LLM 抽取
+# 视为非事件的类型（LLM 判定为噪声时跳过，标 noise 永久跳过）
 _NOISE_TYPE = "other"
 
 # TODO: 优先级 2，实现并发处理，提高抽取效率
 
 def _load_unprocessed_news(db: Session) -> list[RawNews]:
-    """查询尚未关联到任何事件的原始新闻。
+    """查询待处理的原始新闻（extract_status == pending）。
 
-    已处理 = raw_news.id 存在于 event_sources.raw_news_id。
-    用 NOT EXISTS 子查询而非 LEFT JOIN，语义清晰且避免重复行。
+    用状态字段判定而非反查 event_sources：噪声/失败/已抽取的新闻都已落库标记，
+    不会被重复取出，避免反复调 LLM。按 collected_at 升序处理（先采先处理）。
     """
     stmt = (
         select(RawNews)
-        .where(
-            ~RawNews.id.in_(
-                select(EventSource.raw_news_id).where(EventSource.raw_news_id.is_not(None))
-            )
-        )
+        .where(RawNews.extract_status == EXTRACT_STATUS_PENDING)
         .order_by(RawNews.collected_at)
     )
     return list(db.scalars(stmt).all())
@@ -106,11 +110,15 @@ def process_all(db: Session) -> ExtractResult:
     for news in news_list:
         extracted = extract_event(news)
         if extracted is None:
+            # 抽取失败：标记 failed 永久跳过（用户已确认不重试）
+            news.extract_status = EXTRACT_STATUS_FAILED
             failed += 1
+            logger.warning("抽取失败标记 news_id=%s → extract_status=failed", news.id)
             continue
 
-        # LLM 判定为非事件：跳过，不建事件、不写关联（下次仍会重试，可接受）
+        # LLM 判定为非事件：标记 noise 永久跳过，不建事件、不写关联
         if extracted.event_type == _NOISE_TYPE:
+            news.extract_status = EXTRACT_STATUS_NOISE
             skipped_noise += 1
             continue
 
@@ -172,7 +180,11 @@ def process_all(db: Session) -> ExtractResult:
 
 
 def _add_source(db: Session, event_pk: int, news: RawNews) -> None:
-    """写入一条 event_sources 关联。"""
+    """写入一条 event_sources 关联，并把新闻标记为 extracted。
+
+    合并路径与新建路径都走这里，保证「写关联」与「标 extracted」原子一致。
+    """
+    news.extract_status = EXTRACT_STATUS_EXTRACTED
     db.add(
         EventSource(
             event_id=event_pk,
